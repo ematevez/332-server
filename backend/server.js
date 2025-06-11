@@ -13,5 +13,4 @@ app.use(express.json());
 
 app.use("/api/students", require("./routes/students"));
 
-const PORT = 4000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+const PORT = process.env.PORT || 4000;
