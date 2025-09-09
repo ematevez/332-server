@@ -4,7 +4,7 @@ const connectDB = async () => {
   try {
     // await mongoose.connect("mongodb+srv://user:user@cluster0.5cff1qp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
     // await mongoose.connect("mongodb+srv://anibalcaeiro:WKAVCJwJheqziPgN@cluster0.g4hk2z4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
-    await mongoose.connect("mongodb+srv://admin:admin@test.edwyb7i.mongodb.net/?retryWrites=true&w=majority&appName=TEST");
+    await mongoose.connect("mongodb+srv://user:user@cluster0.zirxpbn.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
 
     
     console.log("✔ Conectado a MongoDB Atlas");
