@@ -1,6 +1,6 @@
 // npm init -y
 // npm install express mongoose cors express-validator
-
+// testeo para que se use CI/CD
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./db");
