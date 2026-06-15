@@ -1,38 +1,14 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+.app-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+.header { text-align: center; color: white; margin-bottom: 2rem; }
+.card { background: white; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem; }
+.form-group { margin-bottom: 1rem; }
+.form-control { width: 100%; padding: 0.75rem; border: 2px solid #e1e1e1; border-radius: 8px; }
+.btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-primary { background: linear-gradient(to right, #667eea, #764ba2); color: white; }
+.btn-danger { background: #ff4757; color: white; }
+.btn-secondary { background: #f1f2f6; color: #333; }
+.student-item { background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.badge { padding: 0.25rem 0.75rem; border-radius: 20px; color: white; font-size: 0.8rem; }
+.badge-active { background: #2ed573; }
+.badge-inactive { background: #ff4757; }
+.actions { display: flex; gap: 0.5rem; }
