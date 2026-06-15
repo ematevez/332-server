@@ -4,8 +4,8 @@ import './App.css';
 
 // URL de tu API. 
 // NOTA: En producción (Netlify), cambia esto por la URL de tu backend en Render/Railway.
-const API_URL = 'http://localhost:4000/api/students';
-
+// const API_URL = 'http://localhost:4000/api/students';
+const API_URL = "https://three32-server.onrender.com/api/students";
 function App() {
   // Estados para los datos
   const [students, setStudents] = useState([]);
