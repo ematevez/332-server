@@ -1,32 +1,44 @@
 const mongoose = require('mongoose');
 
-// DEFINICIÓN DEL ESQUEMA (Similar a CREATE TABLE en SQL)
-// Aquí definimos las columnas y sus tipos de datos
+// Definición del Esquema (Similar a CREATE TABLE en SQL)
 const studentSchema = new mongoose.Schema({
   name: { 
     type: String, 
-    required: [true, 'El nombre es obligatorio'] // NOT NULL en SQL
+    required: [true, 'El nombre es obligatorio'], 
+    trim: true 
   },
   email: { 
     type: String, 
-    required: true, 
-    unique: true, // UNIQUE INDEX en SQL
-    lowercase: true // Normaliza el dato antes de guardar
+    required: [true, 'El email es obligatorio'], 
+    unique: true, // Esto crea un índice único en la DB (como UNIQUE en SQL)
+    lowercase: true,
+    trim: true 
   },
   age: { 
     type: Number, 
-    min: [10, 'Edad mínima 10'], 
-    max: [100, 'Edad máxima 100'] 
+    min: [10, 'La edad mínima es 10'], 
+    max: [100, 'La edad máxima es 100'] 
   },
-  phone: String,
-  course: String,
+  phone: { 
+    type: String, 
+    required: [true, 'El teléfono es obligatorio'],
+    trim: true 
+  },
+  course: { 
+    type: String, 
+    required: [true, 'El curso es obligatorio'],
+    trim: true 
+  },
   active: { 
     type: Boolean, 
-    default: true // DEFAULT TRUE en SQL
+    default: true 
   }
 }, { 
-  timestamps: true // Crea automáticamente createdAt y updatedAt
+  timestamps: true // Agrega automáticamente createdAt y updatedAt
 });
 
-// Exportamos el "Modelo" (La herramienta para interactuar con la tabla)
+// Índice compuesto para validar duplicados de Nombre+Teléfono+Curso a nivel de base de datos
+// Similar a UNIQUE(name, phone, course) en SQL
+studentSchema.index({ name: 1, phone: 1, course: 1 }, { unique: true });
+
 module.exports = mongoose.model('Student', studentSchema);
