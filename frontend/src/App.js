@@ -12,20 +12,33 @@ function App() {
     age: ''
   });
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Usamos useCallback para memorizar la función y evitar recrearla en cada render
+  // Detectar si estamos en producción para usar la URL correcta
+  const isProduction = window.location.hostname !== 'localhost';
+  const API_BASE = isProduction 
+    ? 'https://three32-server.onrender.com/api/students' 
+    : 'http://localhost:5000/api/students';
+
+  // Sobrescribir la URL del servicio dinámicamente
+  studentService.setBaseUrl(API_BASE);
+
   const loadStudents = useCallback(async () => {
     try {
+      setLoading(true);
       const data = await studentService.getAll();
       setStudents(data);
     } catch (error) {
       console.error("Error al cargar estudiantes:", error);
+      alert("No se pudo conectar con el servidor. Verifica que el backend esté corriendo.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadStudents();
-  }, [loadStudents]); // Ahora es seguro incluir loadStudents en las dependencias
+  }, [loadStudents]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,7 +59,8 @@ function App() {
       setFormData({ name: '', email: '', phone: '', course: '', age: '' });
       loadStudents();
     } catch (error) {
-      alert('Error al guardar: ' + (error.response?.data?.message || error.message));
+      const msg = error.response?.data?.message || error.message;
+      alert('Error al guardar: ' + msg);
     }
   };
 
@@ -59,7 +73,7 @@ function App() {
       age: student.age
     });
     setEditingId(student._id);
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelEdit = () => {
@@ -68,7 +82,7 @@ function App() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este estudiante?')) {
+    if (window.confirm('¿Estás seguro de eliminar este estudiante?')) {
       try {
         await studentService.delete(id);
         alert('Estudiante eliminado');
@@ -82,98 +96,66 @@ function App() {
 
   return (
     <div className="App">
-      <header className="app-header">
-        <h1>Gestión de Estudiantes</h1>
-      </header>
+      <h1>Gestión de Estudiantes</h1>
 
-      <main className="container">
-        {/* Formulario */}
-        <section className="form-section card">
-          <h2>{editingId ? 'Editar Estudiante' : 'Nuevo Estudiante'}</h2>
-          <form onSubmit={handleSubmit} className="student-form">
-            <div className="form-group">
-              <label>Nombre</label>
-              <input name="name" value={formData.name} onChange={handleChange} required placeholder="Ej: Juan Pérez" />
-            </div>
-            
-            <div className="form-group">
-              <label>Email</label>
-              <input name="email" type="email" value={formData.email} onChange={handleChange} required placeholder="juan@ejemplo.com" />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Teléfono</label>
-                <input name="phone" value={formData.phone} onChange={handleChange} required placeholder="123456789" />
-              </div>
-              <div className="form-group">
-                <label>Edad</label>
-                <input name="age" type="number" value={formData.age} onChange={handleChange} required placeholder="25" />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Curso</label>
-              <input name="course" value={formData.course} onChange={handleChange} required placeholder="Ej: Matemáticas Avanzadas" />
-            </div>
-            
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
-                {editingId ? 'Actualizar' : 'Guardar'}
+      <div className="form-container">
+        <h2>{editingId ? '✏️ Editar Estudiante' : '➕ Nuevo Estudiante'}</h2>
+        <form onSubmit={handleSubmit}>
+          <input name="name" placeholder="Nombre completo" value={formData.name} onChange={handleChange} required />
+          <input name="email" type="email" placeholder="Correo electrónico" value={formData.email} onChange={handleChange} required />
+          <input name="phone" placeholder="Teléfono" value={formData.phone} onChange={handleChange} required />
+          <input name="course" placeholder="Curso / Especialidad" value={formData.course} onChange={handleChange} required />
+          <input name="age" type="number" placeholder="Edad" value={formData.age} onChange={handleChange} required />
+          
+          <div className="button-group">
+            <button type="submit" className="btn-save">
+              {editingId ? 'Actualizar Datos' : 'Guardar Estudiante'}
+            </button>
+            {editingId && (
+              <button type="button" onClick={handleCancelEdit} className="btn-cancel">
+                Cancelar
               </button>
-              {editingId && (
-                <button type="button" onClick={handleCancelEdit} className="btn btn-secondary">
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
-        </section>
+            )}
+          </div>
+        </form>
+      </div>
 
-        {/* Lista */}
-        <section className="list-section card">
-          <h2>Lista de Estudiantes</h2>
-          {students.length === 0 ? (
-            <p className="empty-state">No hay estudiantes registrados.</p>
-          ) : (
-            <div className="table-responsive">
-              <table className="students-table">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Teléfono</th>
-                    <th>Curso</th>
-                    <th>Edad</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student) => (
-                    <tr key={student._id}>
-                      <td>{student.name}</td>
-                      <td>{student.email}</td>
-                      <td>{student.phone}</td>
-                      <td>{student.course}</td>
-                      <td>{student.age}</td>
-                      <td>
-                        <div className="action-buttons">
-                          <button onClick={() => handleEdit(student)} className="btn btn-sm btn-edit">
-                            Editar
-                          </button>
-                          <button onClick={() => handleDelete(student._id)} className="btn btn-sm btn-delete">
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
+      <div className="list-container">
+        <h2>📋 Lista de Estudiantes</h2>
+        {loading ? (
+          <p style={{textAlign: 'center', padding: '2rem'}}>Cargando datos...</p>
+        ) : students.length === 0 ? (
+          <p style={{textAlign: 'center', color: '#6b7280'}}>No hay estudiantes registrados aún.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Curso</th>
+                <th>Edad</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student) => (
+                <tr key={student._id}>
+                  <td><strong>{student.name}</strong></td>
+                  <td>{student.email}</td>
+                  <td>{student.phone}</td>
+                  <td>{student.course}</td>
+                  <td>{student.age}</td>
+                  <td className="actions">
+                    <button onClick={() => handleEdit(student)} className="btn-edit">Editar</button>
+                    <button onClick={() => handleDelete(student._id)} className="btn-delete">Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
