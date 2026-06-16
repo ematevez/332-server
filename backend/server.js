@@ -1,104 +1,37 @@
-// npm init -y
-// npm install express mongoose cors express-validator
-// testeo para que se use CI/CD
-const express = require("express");
-const cors = require("cors");
-const connectDB = require("./db");
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
-connectDB();
+const PORT = process.env.PORT || 5000;
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/students", require("./routes/students"));
+// Conexión a MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB conectado'))
+.catch(err => console.error('Error conectando a MongoDB:', err));
 
-const express = require('express');
-const router = express.Router();
-const axios = require('axios');
-const ExternalUser = require('../models/ExternalUser');
+// Rutas
+// Asegúrate de que la ruta relativa sea correcta según tu estructura de carpetas
+const studentRoutes = require('./routes/students'); 
+// Si tienes la nueva ruta de usuarios externos, impórtala aquí también:
+// const externalUserRoutes = require('./routes/externalUsers');
 
-// 1. Obtener usuarios de la API externa y guardarlos en nuestra BD (Sincronizar)
-router.get('/sync', async (req, res) => {
-  try {
-    // Traemos datos de JSONPlaceholder (API pública gratuita)
-    const response = await axios.get('https://jsonplaceholder.typicode.com/users');
-    const apiUsers = response.data;
+app.use('/api/students', studentRoutes);
+// app.use('/api/external-users', externalUserRoutes);
 
-    let importedCount = 0;
-
-    for (const user of apiUsers) {
-      // Buscamos si ya existe por su ID externo o Email
-      const exists = await ExternalUser.findOne({ 
-        $or: [{ externalId: user.id }, { email: user.email }] 
-      });
-
-      if (!exists) {
-        await ExternalUser.create({
-          externalId: user.id,
-          name: user.name,
-          email: user.email,
-          username: user.username,
-          department: 'General' // Departamento por defecto
-        });
-        importedCount++;
-      }
-    }
-
-    res.json({ message: `Sincronización completa. ${importedCount} nuevos usuarios importados.` });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al sincronizar con API externa', error: error.message });
-  }
+// Ruta de prueba
+app.get('/', (req, res) => {
+  res.send('API funcionando correctamente');
 });
 
-// 2. Obtener todos los usuarios externos guardados en nuestra BD
-router.get('/', async (req, res) => {
-  try {
-    const users = await ExternalUser.find().sort({ createdAt: -1 });
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
-
-// 3. Mover usuario de departamento (Curso)
-router.put('/:id/move', async (req, res) => {
-  const { newDepartment } = req.body;
-  
-  if (!newDepartment) {
-    return res.status(400).json({ message: 'El nombre del nuevo departamento es requerido' });
-  }
-
-  try {
-    const updatedUser = await ExternalUser.findByIdAndUpdate(
-      req.params.id,
-      { department: newDepartment },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    res.json({ message: `Usuario movido a ${newDepartment}`, user: updatedUser });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// 4. Eliminar usuario externo
-router.delete('/:id', async (req, res) => {
-  try {
-    await ExternalUser.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Usuario externo eliminado' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
-
-
-const PORT = 4000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
-

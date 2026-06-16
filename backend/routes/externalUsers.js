@@ -24,7 +24,8 @@ router.get('/sync', async (req, res) => {
           name: user.name,
           email: user.email,
           username: user.username,
-          department: 'General' // Departamento por defecto
+          department: 'General', // Departamento por defecto
+          source:'jsonplaceholder' // Fuente de datos
         });
         importedCount++;
       }
@@ -74,8 +75,16 @@ router.put('/:id/move', async (req, res) => {
 // 4. Eliminar usuario externo
 router.delete('/:id', async (req, res) => {
   try {
-    await ExternalUser.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Usuario externo eliminado' });
+    
+        const deleted = await ExternalUser.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+        return res.status(404).json({
+            message: 'Usuario no encontrado'
+        });
+        }
+
+        res.json({  message: 'Usuario eliminado'});
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

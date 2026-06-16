@@ -5,7 +5,7 @@ const ExternalUserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   username: { type: String },
-  department: { type: String, default: 'Sin Asignar' }, // Equivalente a "curso" para moverlos
+  department: { type: String, default: 'General' }, // Equivalente a "curso" para moverlos
   source: { type: String, default: 'jsonplaceholder' }
 }, { timestamps: true });
 
