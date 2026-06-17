@@ -10,7 +10,7 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <nav style={{background:'#333', padding:'1rem', textAlign:'center'}}>
-        <Link to="/" style={{color:'white', marginRight:'20px', textDecoration:'none', fontWeight:'bold'}}>🎓 Estudiantes</Link>
+        <Link to="/" style={{color:'white', marginRight:'20px', textDecoration:'none', fontWeight:'bold'}}>🎓 Estudiantes 1</Link>
         <Link to="/externos" style={{color:'white', textDecoration:'none', fontWeight:'bold'}}>🌍 Usuarios Externos</Link>
       </nav>
       <Routes>
