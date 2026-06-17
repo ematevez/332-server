@@ -5,7 +5,7 @@ const ExternalUserSchema = new mongoose.Schema({
   name: String,
   email: String,
   avatar_url: String,
-  course: String, // Usaremos la ciudad de la API como "curso"
+  course: { type: String, default: 'Sin Asignar' }, // Campo para moverlos de curso
   country: String,
   online: Boolean,
   last_seen: Date,
