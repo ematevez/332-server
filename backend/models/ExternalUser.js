@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
 
-const externalUserSchema = new mongoose.Schema({
+const ExternalUserSchema = new mongoose.Schema({
   externalId: { type: Number, required: true, unique: true }, // ID original de la API externa
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  role: { type: String, default: 'Developer' }, // Esto actuará como el "curso/departamento"
-  avatar: { type: String },
+  name: String,
+  email: String,
+  avatar_url: String,
+  course: String, // Usaremos la ciudad de la API como "curso"
+  country: String,
+  online: Boolean,
+  last_seen: Date,
   importedAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('ExternalUser', externalUserSchema);
+module.exports = mongoose.model('ExternalUser', ExternalUserSchema);
