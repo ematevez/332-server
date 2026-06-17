@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css'; // Reutilizamos los estilos
 
-const API_URL = 'http://localhost:5000/api/external-users';
+const API_URL = 'https://devsapihub.com/api-users';
 
 function ExternalUsers() {
   const [users, setUsers] = useState([]);
