@@ -1,123 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './ExternalUsers.css'; // Asegúrate de crear un CSS básico o usar App.css
 
-// Usa la URL de tu backend en Render (ej: https://three32-server.onrender.com/api/external-users)
-const API_URL = process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/external-users` : 'http://localhost:5000/api/external-users';
+// CAMBIA ESTO POR LA URL DE TU BACKEND EN RENDER
+const API_URL = 'https://three32-server.onrender.com/api/external-users'; 
 
 function ExternalUsers() {
-  const [users, setUsers] = useState([]);
+  const [externalUsers, setExternalUsers] = useState([]); // Usuarios de la API externa
+  const [savedUsers, setSavedUsers] = useState([]);       // Usuarios en tu MongoDB
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // Cursos disponibles para mover
-  const courses = ['Sin Asignar', 'New York', 'London', 'Bogota', 'Paris', 'Tokyo', 'Berlin'];
-
+  // Cargar datos al iniciar
   useEffect(() => {
-    loadLocalUsers();
+    loadData();
   }, []);
 
-  const loadLocalUsers = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      // Solo trae los que YA están en TU base de datos
-      const res = await axios.get(API_URL);
-      setUsers(res.data);
+      // 1. Traer lista de la API externa (a través de tu backend)
+      const resExt = await axios.get(`${API_URL}/list-external`);
+      const externalData = resExt.data;
+
+      // 2. Traer lista de los que YA guardaste en tu DB
+      const resSaved = await axios.get(API_URL);
+      const savedData = resSaved.data;
+
+      // Filtrar: Mostrar en "Disponibles" solo los que NO están en "Guardados"
+      const savedIds = new Set(savedData.map(u => u.externalId));
+      const available = externalData.filter(u => !savedIds.has(u.id));
+
+      setExternalUsers(available);
+      setSavedUsers(savedData);
     } catch (error) {
-      setMsg('Error cargando usuarios locales.');
       console.error(error);
+      setMsg('Error cargando datos. Revisa los logs del backend.');
     }
     setLoading(false);
   };
 
-  const handleImport = async () => {
-    setLoading(true);
-    setMsg('Conectando con API externa y guardando en tu BD...');
+  // Acción: Guardar uno individual
+  const handleSave = async (user) => {
     try {
-      // Llama al backend para que él haga el fetch y el save
-      const res = await axios.post(`${API_URL}/import`);
-      setMsg(res.data.message);
-      loadLocalUsers(); // Recargar lista con los nuevos datos
+      await axios.post(`${API_URL}/save`, user);
+      setMsg(`✅ ${user.name} guardado en tu base de datos.`);
+      loadData(); // Recargar listas
     } catch (error) {
-      setMsg('Error al importar. Revisa los logs del backend.');
-      console.error(error);
-    }
-    setLoading(false);
-  };
-
-  const handleMove = async (id, newCourse) => {
-    try {
-      await axios.put(`${API_URL}/${id}/move`, { newCourse });
-      setMsg(`Usuario movido a ${newCourse}`);
-      loadLocalUsers();
-    } catch (error) {
-      setMsg('Error al mover usuario.');
+      setMsg('❌ Error al guardar: ' + (error.response?.data?.message || error.message));
     }
   };
 
+  // Acción: Borrar de tu DB
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este usuario de tu base de datos?')) return;
     try {
       await axios.delete(`${API_URL}/${id}`);
       setMsg('Usuario eliminado.');
-      loadLocalUsers();
+      loadData();
     } catch (error) {
       setMsg('Error al eliminar.');
     }
   };
 
+  // Acción: Mover de curso (Editar simple)
+  const handleMoveCourse = async (id, newCourse) => {
+    try {
+      await axios.put(`${API_URL}/${id}`, { course: newCourse });
+      setMsg('Curso actualizado.');
+      loadData();
+    } catch (error) {
+      setMsg('Error al actualizar.');
+    }
+  };
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>Gestión de Usuarios Externos</h2>
-      <p>Estos son los usuarios guardados en <strong>tu colección MongoDB</strong>.</p>
+    <div className="external-users-container">
+      <h1>Gestión de Usuarios Externos</h1>
+      {msg && <div className="alert">{msg}</div>}
       
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={handleImport} disabled={loading} style={btnStyle}>
-          {loading ? 'Procesando...' : '📥 Importar desde API Externa'}
-        </button>
-        {msg && <p style={{ color: '#0066cc', fontWeight: 'bold' }}>{msg}</p>}
-      </div>
-
-      {loading && !msg ? <p>Cargando...</p> : null}
-
-      {!loading && users.length === 0 ? (
-        <p>No hay usuarios en la base de datos. Haz clic en "Importar" para traerlos.</p>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-          {users.map(user => (
-            <div key={user._id} style={cardStyle}>
-              <img src={user.avatar_url} alt={user.name} style={imgStyle} onError={(e) => e.target.src='https://via.placeholder.com/100'} />
-              <h3>{user.name}</h3>
-              <p><small>{user.email}</small></p>
-              <p><strong>País:</strong> {user.country}</p>
-              <p><strong>Curso Actual:</strong> {user.course}</p>
+      {loading ? <p>Cargando datos...</p> : (
+        <div className="lists-wrapper">
+          
+          {/* LISTA 1: DISPONIBLES EN API (Para Guardar) */}
+          <div className="list-section">
+            <h2>📥 Disponibles en API (No guardados)</h2>
+            <p>Selecciona qué usuarios traer a tu base de datos.</p>
+            <div className="cards-grid">
+              {externalUsers.length === 0 ? <p>No hay usuarios nuevos disponibles.</p> : null}
               
-              <div style={{ marginTop: '10px' }}>
-                <label style={{ fontSize: '12px' }}>Mover a: </label>
-                <select 
-                  value={user.course} 
-                  onChange={(e) => handleMove(user._id, e.target.value)}
-                  style={selectStyle}
-                >
-                  {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              <button onClick={() => handleDelete(user._id)} style={deleteBtnStyle}>
-                🗑️ Eliminar de BD
-              </button>
+              {externalUsers.map(user => (
+                <div key={user.id} className="card">
+                  <img src={user.avatar_url} alt={user.name} className="avatar" />
+                  <h3>{user.name}</h3>
+                  <p><strong>Email:</strong> {user.email}</p>
+                  <p><strong>País:</strong> {user.location?.country}</p>
+                  <p><strong>Ciudad:</strong> {user.location?.city}</p>
+                  <button onClick={() => handleSave(user)} className="btn-save">
+                    💾 Guardar en Cluster
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* LISTA 2: YA GUARDADOS EN TU DB (Para Editar/Borrar) */}
+          <div className="list-section">
+            <h2>💾 Guardados en tu Base de Datos</h2>
+            <p>Estos usuarios ya están en tu colección MongoDB.</p>
+            <div className="cards-grid">
+              {savedUsers.length === 0 ? <p>No has guardado ningún usuario aún.</p> : null}
+
+              {savedUsers.map(user => (
+                <div key={user._id} className="card saved">
+                  <img src={user.avatar_url} alt={user.name} className="avatar" />
+                  <h3>{user.name}</h3>
+                  <p><strong>Email:</strong> {user.email}</p>
+                  
+                  <div className="action-row">
+                    <label>Curso/Ciudad:</label>
+                    <select 
+                      value={user.course} 
+                      onChange={(e) => handleMoveCourse(user._id, e.target.value)}
+                    >
+                      <option value="Sin Asignar">Sin Asignar</option>
+                      <option value="New York">New York</option>
+                      <option value="London">London</option>
+                      <option value="Bogota">Bogota</option>
+                      <option value="Paris">Paris</option>
+                    </select>
+                  </div>
+
+                  <button onClick={() => handleDelete(user._id)} className="btn-delete">
+                    🗑️ Borrar de DB
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
     </div>
   );
 }
-
-// Estilos simples en línea
-const btnStyle = { padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' };
-const deleteBtnStyle = { marginTop: '10px', padding: '5px 10px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '3px', cursor: 'pointer', width: '100%' };
-const cardStyle = { border: '1px solid #ddd', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', textAlign: 'center' };
-const imgStyle = { width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '10px' };
-const selectStyle = { width: '100%', padding: '5px', marginTop: '5px' };
 
 export default ExternalUsers;

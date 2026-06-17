@@ -1,57 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios'); // Necesario para conectar con la API externa
+const axios = require('axios');
 const ExternalUser = require('../models/ExternalUser');
 
 const EXTERNAL_API_URL = 'https://devsapihub.com/api-users';
 
-// 1. IMPORTAR: Trae datos de la API externa y los guarda en tu Mongo
-router.post('/import', async (req, res) => {
+// 1. OBTENER LISTA DE USUARIOS EXTERNOS (Desde la API pública)
+// El frontend llama a esto, y tu servidor va a buscar los datos.
+router.get('/list-external', async (req, res) => {
   try {
-    console.log('Conectando a API externa...');
     const response = await axios.get(EXTERNAL_API_URL);
-    const usersData = response.data;
-
-    if (!Array.isArray(usersData)) {
-      return res.status(400).json({ message: 'Formato de datos externo inválido' });
-    }
-
-    let importedCount = 0;
-    let skippedCount = 0;
-
-    for (const user of usersData) {
-      // Verificar si ya existe por su ID externo
-      const exists = await ExternalUser.findOne({ externalId: user.id });
-      
-      if (!exists) {
-        await ExternalUser.create({
-          externalId: user.id,
-          name: user.name,
-          email: user.email,
-          avatar_url: user.avatar_url?.trim(), // Limpiar espacios extra
-          course: user.location?.city || 'Sin Asignar',
-          country: user.location?.country || 'Desconocido',
-          online: user.online || false,
-          last_seen: user.last_seen
-        });
-        importedCount++;
-      } else {
-        skippedCount++;
-      }
-    }
-
-    res.json({ 
-      message: `Proceso terminado. ${importedCount} nuevos usuarios guardados. ${skippedCount} ya existían.`,
-      total: usersData.length 
-    });
-
+    res.json(response.data);
   } catch (error) {
-    console.error('Error importando:', error.message);
-    res.status(500).json({ message: 'Error al conectar con la API externa o guardar en DB.' });
+    console.error("Error conectando a API externa:", error.message);
+    res.status(500).json({ message: 'Error al obtener usuarios externos' });
   }
 });
 
-// 2. LISTAR: Muestra SOLO los usuarios que ya están en tu base de datos
+// 2. OBTENER USUARIOS YA GUARDADOS EN TU DB
 router.get('/', async (req, res) => {
   try {
     const users = await ExternalUser.find().sort({ name: 1 });
@@ -61,31 +27,57 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 3. MOVER: Cambia el curso de un usuario guardado
-router.put('/:id/move', async (req, res) => {
+// 3. GUARDAR UN USUARIO INDIVIDUAL EN TU DB
+router.post('/save', async (req, res) => {
   try {
-    const { newCourse } = req.body;
-    if (!newCourse) return res.status(400).json({ message: 'Falta el nuevo curso' });
+    const userData = req.body;
+    
+    // Verificar si ya existe por su ID externo
+    const existing = await ExternalUser.findOne({ externalId: userData.id });
+    if (existing) {
+      return res.status(400).json({ message: 'Este usuario ya está guardado en tu base de datos.' });
+    }
 
-    const updatedUser = await ExternalUser.findByIdAndUpdate(
-      req.params.id,
-      { course: newCourse },
-      { new: true, runValidators: true }
-    );
+    const newUser = new ExternalUser({
+      externalId: userData.id,
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone,
+      avatar_url: userData.avatar_url,
+      course: userData.location?.city || 'Sin Asignar',
+      country: userData.location?.country || 'Desconocido',
+      online: userData.online,
+      last_seen: userData.last_seen
+    });
 
-    if (!updatedUser) return res.status(404).json({ message: 'Usuario no encontrado en BD' });
-
-    res.json(updatedUser);
+    await newUser.save();
+    res.json({ message: 'Usuario guardado correctamente', user: newUser });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// 4. BORRAR: Elimina un usuario de tu base de datos
+// 4. ACTUALIZAR UN USUARIO YA GUARDADO (Mover de curso o editar datos)
+router.put('/:id', async (req, res) => {
+  try {
+    const updatedUser = await ExternalUser.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedUser) return res.status(404).json({ message: 'Usuario no encontrado en tu DB' });
+    
+    res.json({ message: 'Usuario actualizado', user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 5. ELIMINAR UN USUARIO DE TU DB
 router.delete('/:id', async (req, res) => {
   try {
     await ExternalUser.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Usuario eliminado de la base de datos local' });
+    res.json({ message: 'Usuario eliminado de tu base de datos' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
