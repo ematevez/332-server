@@ -9,7 +9,10 @@ app.use(cors());
 app.use(express.json());
 
 // Conexión directa a MongoDB
-mongoose.connect('mongodb+srv://user:user@lectura.k0ihs9e.mongodb.net/qwent?retryWrites=true&w=majority')
+// mongoose.connect('mongodb+srv://user:user@lectura.k0ihs9e.mongodb.net/qwent?retryWrites=true&w=majority')
+mongoose.connect('mongodb+srv://user:user@clusterdeprueba.qbcnna9.mongodb.net/?appName=ClusterDePrueba')
+
+
   .then(() => console.log('✅ MongoDB Conectado'))
   .catch(err => console.error('❌ Error MongoDB:', err));
 
