@@ -32,6 +32,9 @@ app.get('/', (req, res) => {
   res.send('API del Backend funcionando correctamente 🚀');
 });
 
+const externalUsersRoutes = require('./routes/externalUsers');
+app.use('/api/external-users', externalUsersRoutes);
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
