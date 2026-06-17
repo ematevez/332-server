@@ -1,19 +1,15 @@
 const mongoose = require('mongoose');
 
 const ExternalUserSchema = new mongoose.Schema({
-  externalId: { type: Number, required: true }, // ID original de la API externa
+  externalId: { type: Number, required: true, unique: true }, // ID original de la API
   name: String,
   email: String,
   phone: String,
   avatar_url: String,
-  course: { type: String, default: 'Sin Asignar' }, // Lo usaremos como "Ciudad/Curso"
+  course: String, // Lo usaremos como "Departamento" o "Curso"
   country: String,
   online: Boolean,
-  last_seen: Date,
-  importedAt: { type: Date, default: Date.now }
+  last_seen: Date
 });
-
-// Índice para saber si ya guardamos ese usuario externo
-ExternalUserSchema.index({ externalId: 1 }, { unique: true });
 
 module.exports = mongoose.model('ExternalUser', ExternalUserSchema);

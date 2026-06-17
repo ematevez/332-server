@@ -1,146 +1,158 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './ExternalUsers.css'; // Asegúrate de crear un CSS básico o usar App.css
+import './App.css'; // Asegúrate de tener estilos básicos
 
 // CAMBIA ESTO POR LA URL DE TU BACKEND EN RENDER
-const API_URL = 'https://three32-server.onrender.com/api/external-users'; 
+const API_BASE = 'https://three32-server.onrender.com/api/external-users'; 
 
 function ExternalUsers() {
-  const [externalUsers, setExternalUsers] = useState([]); // Usuarios de la API externa
-  const [savedUsers, setSavedUsers] = useState([]);       // Usuarios en tu MongoDB
+  const [externalUsers, setExternalUsers] = useState([]); // Usuarios de la API (temporales)
+  const [savedUsers, setSavedUsers] = useState([]);       // Usuarios en tu DB
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // Cargar datos al iniciar
+  // Cargar listas al iniciar
   useEffect(() => {
-    loadData();
+    loadAllData();
   }, []);
 
-  const loadData = async () => {
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      // 1. Traer lista de la API externa (a través de tu backend)
-      const resExt = await axios.get(`${API_URL}/list-external`);
-      const externalData = resExt.data;
+      // 1. Traer usuarios de la API externa (vía tu backend)
+      const extRes = await axios.get(`${API_BASE}/list-external`);
+      setExternalUsers(extRes.data);
 
-      // 2. Traer lista de los que YA guardaste en tu DB
-      const resSaved = await axios.get(API_URL);
-      const savedData = resSaved.data;
-
-      // Filtrar: Mostrar en "Disponibles" solo los que NO están en "Guardados"
-      const savedIds = new Set(savedData.map(u => u.externalId));
-      const available = externalData.filter(u => !savedIds.has(u.id));
-
-      setExternalUsers(available);
-      setSavedUsers(savedData);
+      // 2. Traer usuarios guardados en tu DB
+      const savedRes = await axios.get(`${API_BASE}`);
+      setSavedUsers(savedRes.data);
     } catch (error) {
-      console.error(error);
-      setMsg('Error cargando datos. Revisa los logs del backend.');
+      setMsg('Error cargando datos: ' + error.message);
     }
     setLoading(false);
   };
 
-  // Acción: Guardar uno individual
+  // --- ACCIONES DE LOS 3 BOTONES ---
+
+  // BOTÓN 1: GUARDAR EN CLUSTER
   const handleSave = async (user) => {
     try {
-      await axios.post(`${API_URL}/save`, user);
-      setMsg(`✅ ${user.name} guardado en tu base de datos.`);
-      loadData(); // Recargar listas
+      await axios.post(`${API_BASE}/save`, user);
+      setMsg(`✅ ${user.name} guardado en la base de datos.`);
+      loadAllData(); // Recargar para actualizar listas
     } catch (error) {
       setMsg('❌ Error al guardar: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  // Acción: Borrar de tu DB
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este usuario de tu base de datos?')) return;
-    try {
-      await axios.delete(`${API_URL}/${id}`);
-      setMsg('Usuario eliminado.');
-      loadData();
-    } catch (error) {
-      setMsg('Error al eliminar.');
+  // BOTÓN 2: MODIFICAR Y GUARDAR (Ejemplo: Cambiar Curso/Departamento)
+  const handleModify = async (user) => {
+    const newCourse = prompt(`Modificar curso/departamento para ${user.name}:`, user.course);
+    if (newCourse && newCourse !== user.course) {
+      try {
+        await axios.put(`${API_BASE}/${user._id}`, { course: newCourse });
+        setMsg(`✏️ ${user.name} actualizado a "${newCourse}".`);
+        loadAllData();
+      } catch (error) {
+        setMsg('❌ Error al modificar: ' + error.message);
+      }
     }
   };
 
-  // Acción: Mover de curso (Editar simple)
-  const handleMoveCourse = async (id, newCourse) => {
-    try {
-      await axios.put(`${API_URL}/${id}`, { course: newCourse });
-      setMsg('Curso actualizado.');
-      loadData();
-    } catch (error) {
-      setMsg('Error al actualizar.');
+  // BOTÓN 3: BORRAR DE LA LISTA (DB)
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Seguro que deseas eliminar este usuario de tu base de datos?')) {
+      try {
+        await axios.delete(`${API_BASE}/${id}`);
+        setMsg('🗑️ Usuario eliminado.');
+        loadAllData();
+      } catch (error) {
+        setMsg('❌ Error al borrar: ' + error.message);
+      }
     }
   };
+
+  // Helper para saber si un usuario externo ya está guardado
+  const isSaved = (extId) => savedUsers.some(u => u.externalId === extId);
 
   return (
-    <div className="external-users-container">
-      <h1>Gestión de Usuarios Externos</h1>
-      {msg && <div className="alert">{msg}</div>}
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Gestión de Usuarios Externos</h1>
+      {msg && <div className="bg-blue-100 p-2 mb-4 rounded">{msg}</div>}
       
-      {loading ? <p>Cargando datos...</p> : (
-        <div className="lists-wrapper">
-          
-          {/* LISTA 1: DISPONIBLES EN API (Para Guardar) */}
-          <div className="list-section">
-            <h2>📥 Disponibles en API (No guardados)</h2>
-            <p>Selecciona qué usuarios traer a tu base de datos.</p>
-            <div className="cards-grid">
-              {externalUsers.length === 0 ? <p>No hay usuarios nuevos disponibles.</p> : null}
-              
-              {externalUsers.map(user => (
-                <div key={user.id} className="card">
-                  <img src={user.avatar_url} alt={user.name} className="avatar" />
-                  <h3>{user.name}</h3>
-                  <p><strong>Email:</strong> {user.email}</p>
-                  <p><strong>País:</strong> {user.location?.country}</p>
-                  <p><strong>Ciudad:</strong> {user.location?.city}</p>
-                  <button onClick={() => handleSave(user)} className="btn-save">
-                    💾 Guardar en Cluster
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+      {loading && <p>Cargando datos...</p>}
 
-          {/* LISTA 2: YA GUARDADOS EN TU DB (Para Editar/Borrar) */}
-          <div className="list-section">
-            <h2>💾 Guardados en tu Base de Datos</h2>
-            <p>Estos usuarios ya están en tu colección MongoDB.</p>
-            <div className="cards-grid">
-              {savedUsers.length === 0 ? <p>No has guardado ningún usuario aún.</p> : null}
-
-              {savedUsers.map(user => (
-                <div key={user._id} className="card saved">
-                  <img src={user.avatar_url} alt={user.name} className="avatar" />
-                  <h3>{user.name}</h3>
-                  <p><strong>Email:</strong> {user.email}</p>
-                  
-                  <div className="action-row">
-                    <label>Curso/Ciudad:</label>
-                    <select 
-                      value={user.course} 
-                      onChange={(e) => handleMoveCourse(user._id, e.target.value)}
-                    >
-                      <option value="Sin Asignar">Sin Asignar</option>
-                      <option value="New York">New York</option>
-                      <option value="London">London</option>
-                      <option value="Bogota">Bogota</option>
-                      <option value="Paris">Paris</option>
-                    </select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {/* COLUMNA 1: USUARIOS DISPONIBLES (API) */}
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Disponibles en API</h2>
+          <div className="space-y-4">
+            {externalUsers.map(user => {
+              const alreadySaved = isSaved(user.id);
+              return (
+                <div key={user.id} className="border p-3 rounded shadow bg-white flex items-center gap-4">
+                  <img src={user.avatar_url} alt={user.name} className="w-12 h-12 rounded-full" />
+                  <div className="flex-1">
+                    <p className="font-bold">{user.name}</p>
+                    <p className="text-sm text-gray-600">{user.email} - {user.location?.city}</p>
                   </div>
+                  
+                  {/* BOTÓN 1: GUARDAR */}
+                  {alreadySaved ? (
+                    <span className="text-green-600 text-sm font-bold">Ya guardado</span>
+                  ) : (
+                    <button 
+                      onClick={() => handleSave(user)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    >
+                      💾 Guardar en DB
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-                  <button onClick={() => handleDelete(user._id)} className="btn-delete">
-                    🗑️ Borrar de DB
+        {/* COLUMNA 2: USUARIOS GUARDADOS (TU DB) */}
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Guardados en tu Cluster</h2>
+          <div className="space-y-4">
+            {savedUsers.map(user => (
+              <div key={user._id} className="border p-3 rounded shadow bg-gray-50 flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <img src={user.avatar_url} alt={user.name} className="w-12 h-12 rounded-full" />
+                  <div>
+                    <p className="font-bold">{user.name}</p>
+                    <p className="text-sm text-gray-600">Curso: <span className="font-mono bg-yellow-200 px-1 rounded">{user.course}</span></p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 mt-2">
+                  {/* BOTÓN 2: MODIFICAR */}
+                  <button 
+                    onClick={() => handleModify(user)}
+                    className="flex-1 bg-orange-500 text-white px-2 py-1 rounded text-sm hover:bg-orange-600"
+                  >
+                    ✏️ Modificar
+                  </button>
+                  
+                  {/* BOTÓN 3: BORRAR */}
+                  <button 
+                    onClick={() => handleDelete(user._id)}
+                    className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-sm hover:bg-red-700"
+                  >
+                    🗑️ Borrar
                   </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+            {savedUsers.length === 0 && <p className="text-gray-500 italic">No hay usuarios guardados aún.</p>}
           </div>
-
         </div>
-      )}
+
+      </div>
     </div>
   );
 }
