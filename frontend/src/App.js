@@ -96,7 +96,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Gestión de Estudiantes</h1>
+      <h1>Gestión de Estudiantes PAKI</h1>
 
       <div className="form-container">
         <h2>{editingId ? '✏️ Editar Estudiante' : '➕ Nuevo Estudiante'}</h2>
